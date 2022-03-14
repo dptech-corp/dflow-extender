@@ -6,8 +6,11 @@ import (
     "log"
     "strconv"
     "time"
+    "os"
+    "io"
 
     "golang.org/x/crypto/ssh"
+    "github.com/pkg/sftp"
     "argo-job-extender/util"
 )
 
@@ -62,7 +65,7 @@ func (c *SSHClient) TryNewSession () *ssh.Session {
     return s
 }
 
-func (c *SSHClient) NewSession(retry int, interval int) (*ssh.Session, error) {
+func (c *SSHClient) NewSession (retry int, interval int) (*ssh.Session, error) {
     for {
         s := c.TryNewSession()
         if s != nil {
@@ -90,4 +93,75 @@ func (c *SSHClient) RunCmd (cmd string, retry int, interval int) (string, string
 
     err = s.Run(cmd)
     return string(o.Bytes()), string(e.Bytes()), err
+}
+
+func (c *SSHClient) TryNewSftpClient () *sftp.Client {
+    if c.client == nil {
+        c.Dial()
+        if c.client == nil {
+            return nil
+        }
+    }
+
+    sftpClient, err := sftp.NewClient(c.client)
+    if err != nil {
+        c.client = nil // Dial in the next try
+        return nil
+    }
+    return sftpClient
+}
+
+func (c *SSHClient) NewSftpClient (retry int, interval int) (*sftp.Client, error) {
+    for {
+        sftpClient := c.TryNewSftpClient()
+        if sftpClient != nil {
+            return sftpClient, nil
+        }
+        retry--
+        if retry == 0 {
+            return nil, ErrSSHConnection
+        }
+        time.Sleep(time.Duration(interval) * time.Second)
+    }
+}
+
+func (c *SSHClient) Upload (srcPath string, dstPath string, retry int, interval int) error {
+    sftpClient, err := c.NewSftpClient(retry, interval)
+    if err != nil {
+        return err
+    }
+    srcFile, _ := os.Open(srcPath)
+    dstFile, _ := sftpClient.Create(dstPath)
+    defer func() {
+        _ = srcFile.Close()
+        _ = dstFile.Close()
+    }()
+    buf := make([]byte, 1024)
+    for {
+        n, err := srcFile.Read(buf)
+        if err != nil {
+            if err != io.EOF {
+                return err
+            } else {
+                break
+            }
+        }
+        _, _ = dstFile.Write(buf[: n])
+    }
+    return nil
+}
+
+func (c *SSHClient) Download (srcPath string, dstPath string, retry int, interval int) error {
+    sftpClient, err := c.NewSftpClient(retry, interval)
+    if err != nil {
+        return err
+    }
+    srcFile, _ := sftpClient.Open(srcPath)
+    dstFile, _ := os.Create(dstPath)
+    defer func() {
+        _ = srcFile.Close()
+        _ = dstFile.Close()
+    }()
+    _, err = srcFile.WriteTo(dstFile)
+    return err
 }

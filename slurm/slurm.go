@@ -86,7 +86,7 @@ func SaveJobId(jobIdFile string, jobId int) {
 }
 
 func SubmitJob (c *client.SSHClient, workdir string, scriptFile string) int {
-    o, _, err := c.RunCmd("cd " + workdir + " && sbatch " + scriptFile, -1, 5) // try infinity times
+    o, _, err := c.RunCmd("cd " + workdir + " && sbatch " + scriptFile, -1, 5) // try infinite times
     if err != nil {
         log.Fatal("Submit slurm job failed: ", err)
     }
