@@ -62,6 +62,9 @@ func main() {
             break
         } else if jobInfo.status == "PURGED" {
             break
+        } else if jobInfo.status == "CANCELLED" {
+            jobInfo.code = 1
+            break
         }
     }
 
