@@ -1,4 +1,4 @@
-module argo-job-extender
+module dflow-extender
 
 go 1.17
 

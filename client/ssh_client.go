@@ -11,7 +11,7 @@ import (
 
     "golang.org/x/crypto/ssh"
     "github.com/pkg/sftp"
-    "argo-job-extender/util"
+    "dflow-extender/util"
 )
 
 type SSHClient struct {
