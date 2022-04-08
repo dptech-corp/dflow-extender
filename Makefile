@@ -1,6 +1,6 @@
 BIN = bin
-ROOT_PKG = argo-job-extender
-IMAGE = argo-job-extender:v1.0
+ROOT_PKG = dflow-extender
+IMAGE = dflow-extender:v1.0
 
 .PHONY: all
 all: slurm

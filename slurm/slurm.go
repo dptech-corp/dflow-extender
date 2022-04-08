@@ -10,8 +10,8 @@ import (
     "time"
 
     "gopkg.in/yaml.v2"
-    "argo-job-extender/util"
-    "argo-job-extender/client"
+    "dflow-extender/util"
+    "dflow-extender/client"
 )
 
 type SlurmJobInfo struct {
