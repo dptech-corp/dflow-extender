@@ -89,7 +89,9 @@ func SaveJobId(jobIdFile string, jobId int) {
 }
 
 func SubmitJob (c *client.SSHClient, workdir string, scriptFile string) int {
-    o, _, err := c.RunCmd("cd " + workdir + " && sbatch " + scriptFile, -1, 5) // try infinite times
+    o, e, err := c.RunCmd("cd " + workdir + " && sbatch " + scriptFile, -1, 5) // try infinite times
+    fmt.Printf(o)
+    fmt.Printf(e)
     if err != nil {
         log.Fatal("Submit slurm job failed: ", err)
     }
@@ -121,11 +123,8 @@ func SyncLog (c *client.SSHClient, workdir string, jobId int, skip int) int {
 
 func GetJobInfo (c *client.SSHClient, jobId int) SlurmJobInfo {
     o, _, err := c.RunCmd("scontrol show job " + strconv.Itoa(jobId), 1, 0) // try only once
-    if err == client.ErrSSHConnection {
+    if err != nil {
         return SlurmJobInfo{"UNKNOWN", 0}
-    } else if err != nil {
-        log.Println("The job record has been purged from slurm")
-        return SlurmJobInfo{"PURGED", 0}
     }
     i := strings.Index(o, "JobState=")
     status := strings.Fields(o[i:])[0][9:]
@@ -134,4 +133,3 @@ func GetJobInfo (c *client.SSHClient, jobId int) SlurmJobInfo {
     code, _ := strconv.Atoi(o[i+9:i+9+j])
     return SlurmJobInfo{status, code}
 }
-
