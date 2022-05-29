@@ -8,6 +8,7 @@ import (
     "time"
     "os"
     "io"
+    "io/ioutil"
 
     "golang.org/x/crypto/ssh"
     "github.com/pkg/sftp"
@@ -26,13 +27,34 @@ func NewSSHClient (conf util.Config) *SSHClient {
     host := conf.GetValue("host").(string)
     port := conf.GetValue("port").(int)
     username := conf.GetValue("username").(string)
-    password := conf.GetValue("password").(string)
-    config := &ssh.ClientConfig{
-        User: username,
-        Auth: []ssh.AuthMethod{
-            ssh.Password(password),
-        },
-        HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+    config := &ssh.ClientConfig{}
+    switch {
+    case conf["password"] != nil:
+        password := conf.GetValue("password").(string)
+        config = &ssh.ClientConfig{
+            User: username,
+            Auth: []ssh.AuthMethod{
+                ssh.Password(password),
+            },
+            HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+        }
+    case conf["privateKeyFile"] != nil:
+        privateKeyFile := conf.GetValue("privateKeyFile").(string)
+        privateKey, err := ioutil.ReadFile(privateKeyFile)
+        if err != nil {
+            log.Fatal("Private key file " + privateKeyFile + " not found")
+        }
+        signer, err := ssh.ParsePrivateKey(privateKey)
+        if err != nil {
+            log.Fatal("Parse private key file " + privateKeyFile + " error")
+        }
+        config = &ssh.ClientConfig{
+            User: username,
+            Auth: []ssh.AuthMethod{
+                ssh.PublicKeys(signer),
+            },
+            HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+        }
     }
     addr := host + ":" + strconv.Itoa(port)
     c := &SSHClient{config, addr, nil}
