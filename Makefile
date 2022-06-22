@@ -1,6 +1,4 @@
 BIN = bin
-ROOT_PKG = dflow-extender
-IMAGE = dflow-extender:v1.0
 
 .PHONY: all
 all: slurm
@@ -9,4 +7,4 @@ all: slurm
 slurm:
 	go mod vendor && \
 	mkdir -p $(BIN) && \
-	go build -o $(BIN)/slurm $(ROOT_PKG)/slurm
+	go build -o $(BIN)/slurm ./cmd/slurm/slurm.go

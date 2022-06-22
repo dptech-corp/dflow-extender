@@ -1,4 +1,4 @@
-module dflow-extender
+module github.com/dptech-corp/dflow-extender
 
 go 1.17
 
