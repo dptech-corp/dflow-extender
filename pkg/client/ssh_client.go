@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dptech-corp/dflow-extender/pkg/util"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
-	"github.com/dptech-corp/dflow-extender/pkg/util"
 )
 
 type SSHClient struct {
@@ -25,7 +25,7 @@ type SSHClient struct {
 	client *ssh.Client
 }
 
-var ErrSSHConnection = errors.New("Maximum retries has been reached for SSH connection")
+var ErrSSHConnection = errors.New("maximum retries has been reached for SSH connection")
 
 func NewSSHClient(conf util.Config) *SSHClient {
 	host := conf.GetValue("host").(string)
@@ -33,7 +33,7 @@ func NewSSHClient(conf util.Config) *SSHClient {
 	username := conf.GetValue("username").(string)
 	addr := host + ":" + strconv.Itoa(port)
 	config := &ssh.ClientConfig{
-		User: username,
+		User:            username,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 	switch {
@@ -41,6 +41,11 @@ func NewSSHClient(conf util.Config) *SSHClient {
 		password := conf.GetValue("password").(string)
 		config.Auth = []ssh.AuthMethod{
 			ssh.Password(password),
+		}
+	case conf["keyFile"] != nil:
+		err := getAuthFromKeyFile(addr, config, conf["keyFile"].(string))
+		if err != nil {
+			log.Fatalf("Failed to get auth: %s", err)
 		}
 	default:
 		err := getAuth(addr, config)
@@ -51,6 +56,25 @@ func NewSSHClient(conf util.Config) *SSHClient {
 	c := &SSHClient{config, addr, nil}
 	c.Dial()
 	return c
+}
+
+func getAuthFromKeyFile(addr string, config *ssh.ClientConfig, keyFile string) error {
+	if _, err := os.Stat(keyFile); err != nil {
+		return err
+	}
+	privateKey, err := ioutil.ReadFile(keyFile)
+	if err != nil {
+		return err
+	}
+	signer, err := ssh.ParsePrivateKey(privateKey)
+	if err != nil {
+		return err
+	}
+	config.Auth = []ssh.AuthMethod{
+		ssh.PublicKeys(signer),
+	}
+	err = authenticate(addr, config)
+	return err
 }
 
 func getAuth(addr string, config *ssh.ClientConfig) error {
@@ -77,7 +101,7 @@ func getAuth(addr string, config *ssh.ClientConfig) error {
 			}
 		}
 	}
-	return fmt.Errorf("Failed to authenticate")
+	return fmt.Errorf("failed to authenticate")
 }
 
 func authenticate(addr string, config *ssh.ClientConfig) error {
